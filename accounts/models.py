@@ -23,7 +23,6 @@ class UserProfile(models.Model):
     
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        
         # Only perform local image resize if using FileSystemStorage (not S3)
         from django.core.files.storage import default_storage
         from django.core.files.storage import FileSystemStorage
