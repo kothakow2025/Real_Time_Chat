@@ -24,10 +24,13 @@ class UserProfile(models.Model):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         
-        # Resize image if it exists and is not the default
-        if (self.profile_picture and 
-            os.path.exists(self.profile_picture.path) and 
-            'default' not in self.profile_picture.name):
+        # Resize image only if storage supports .path (i.e., local storage)
+        if (
+            self.profile_picture and 
+            hasattr(self.profile_picture, 'path') and 
+            os.path.exists(getattr(self.profile_picture, 'path', '')) and 
+            'default' not in self.profile_picture.name
+        ):
             try:
                 img = Image.open(self.profile_picture.path)
                 if img.height > 300 or img.width > 300:
