@@ -88,7 +88,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'kothakow.wsgi.application'
 ASGI_APPLICATION = 'kothakow.asgi.application'
 
-# Channels: Use Redis in production, InMemoryChannelLayer for local/dev
+# Channels: Use Redis if available, otherwise fall back to InMemoryChannelLayer (for local/dev or if Redis fails)
 REDIS_URL = os.environ.get('REDIS_URL')
 if REDIS_URL:
     CHANNEL_LAYERS = {
@@ -100,11 +100,13 @@ if REDIS_URL:
         }
     }
 else:
+    # Use in-memory backend if Redis is not set or fails
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels.layers.InMemoryChannelLayer"
         }
     }
+
 
 
 # Database
