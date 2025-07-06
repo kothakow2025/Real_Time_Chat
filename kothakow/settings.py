@@ -100,10 +100,13 @@ if REDIS_URL:
         }
     }
 else:
-    # Use in-memory backend if Redis is not set or fails
+    # Use DatabaseChannelLayer as fallback if Redis is not set (for multi-process production like Render)
     CHANNEL_LAYERS = {
         "default": {
-            "BACKEND": "channels.layers.InMemoryChannelLayer"
+            "BACKEND": "channels.layers.DatabaseChannelLayer",
+            "CONFIG": {
+                "expiry": 60 * 60,  # 1 hour expiry for messages
+            },
         }
     }
 
