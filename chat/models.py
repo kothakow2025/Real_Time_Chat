@@ -107,13 +107,7 @@ class Message(models.Model):
         try:
             # Delete image file if it exists
             if self.image:
-                if hasattr(self.image, 'path') and os.path.exists(self.image.path):
-                    try:
-                        os.remove(self.image.path)
-                        print(f"Deleted image file: {self.image.path}")
-                    except OSError as e:
-                        print(f"Error deleting image file {self.image.path}: {e}")
-                # Also try to delete using storage if available
+                # Only use .delete() method of the storage backend (S3 or local)
                 try:
                     self.image.delete(save=False)
                 except Exception as e:
@@ -121,13 +115,7 @@ class Message(models.Model):
             
             # Delete video file if it exists
             if self.video:
-                if hasattr(self.video, 'path') and os.path.exists(self.video.path):
-                    try:
-                        os.remove(self.video.path)
-                        print(f"Deleted video file: {self.video.path}")
-                    except OSError as e:
-                        print(f"Error deleting video file {self.video.path}: {e}")
-                # Also try to delete using storage if available
+                # Only use .delete() method of the storage backend (S3 or local)
                 try:
                     self.video.delete(save=False)
                 except Exception as e:
