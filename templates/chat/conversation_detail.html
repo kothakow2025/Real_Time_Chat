@@ -1,0 +1,850 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Chat with {{ other_participant.get_full_name|default:other_participant.username }} - Kotha Kow{% endblock %}
+
+{% block extra_css %}
+<style>
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+    body {
+        min-height: 100vh;
+        height: 100vh;
+        overflow: hidden;
+    }
+    .chat-fullscreen-container {
+        position: fixed;
+        top: 56px; /* height of navbar, adjust if needed */
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100vw;
+        height: calc(100vh - 56px);
+        background: white;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        padding: 0;
+    }
+    .chat-header {
+        background: linear-gradient(45deg, darkgray, darkorange);
+        color: white;
+        border-radius: 0;
+        padding: 20px;
+    }
+    .chat-messages {
+        overflow-y: auto;
+        padding: 20px;
+        background-color: darkgray;
+        flex-grow: 1;
+        min-height: 0;
+        max-height: none;
+    }
+    .message-input-area {
+        background-color: white;
+        border-radius: 0 0 0 0;
+        padding: 20px;
+        border-top: 1px solid #dee2e6;
+    }
+    .message-timestamp {
+        font-size: 0.75rem;
+        color: darkgoldenrod;
+        margin-top: 5px;
+    }
+    .media-preview {
+        max-width: 200px;
+        max-height: 200px;
+        border-radius: 10px;
+        margin-top: 10px;
+    }
+    .typing-indicator {
+        display: none;
+        padding: 10px;
+        font-style: italic;
+        color: #6c757d;
+    }
+    .file-upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .file-upload-area:hover {
+        border-color: #667eea;
+        background-color: #f8f9fa;
+    }
+    .file-upload-area.dragover {
+        border-color: #667eea;
+        background-color: #e3f2fd;
+    }
+    .file-upload-area.has-file {
+        border-color: #28a745;
+        background-color: #d4edda;
+    }
+    
+    /* Message editing and unsending styles */
+    .message-bubble {
+        position: relative;
+        cursor: pointer;
+    }
+    .message-bubble:hover .message-actions {
+        opacity: 1;
+    }
+    .message-actions {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        z-index: 10;
+        display: flex;
+        gap: 5px;
+        padding: 5px;
+    }
+    .message-actions button {
+        border: none;
+        background: none;
+        padding: 5px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    .message-actions button:hover {
+        background-color: #f8f9fa;
+    }
+    .message-actions .edit-btn {
+        color: #007bff;
+    }
+    .message-actions .unsend-btn {
+        color: #dc3545;
+    }
+    .message-actions .unsend-btn.disabled {
+        color: #6c757d;
+        cursor: not-allowed;
+    }
+    .edit-form {
+        display: none;
+        margin-top: 10px;
+    }
+    .edit-form input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        margin-bottom: 5px;
+    }
+    .edit-form .btn-group {
+        display: flex;
+        gap: 5px;
+    }
+    .edit-form .btn {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+    .message-unsent {
+        opacity: 0.5;
+        font-style: italic;
+    }
+    .message-unsent .message-content {
+        display: none;
+    }
+    .message-unsent .unsent-indicator {
+        display: block;
+        color: #6c757d;
+        font-size: 0.9em;
+    }
+    .unsent-indicator {
+        display: none;
+    }
+    .edited-indicator {
+        font-size: 0.7em;
+        color: #6c757d;
+        font-style: italic;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chat-fullscreen-container">
+    <!-- Chat Header -->
+    <div class="chat-header">
+        <div class="d-flex align-items-center">
+            <a href="{% url 'chat:dashboard' %}" class="btn btn-light btn-sm me-3">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div class="flex-shrink-0 me-3 position-relative">
+                {% if other_participant.userprofile.profile_picture %}
+                    <img src="{{ other_participant.userprofile.profile_picture.url }}" 
+                         alt="{{ other_participant.username }}" 
+                         class="user-avatar">
+                    {% if other_participant.userprofile.is_online %}
+                        <span class="online-indicator position-absolute" style="bottom: 4px; right: 4px; border: 2px solid #fff;"></span>
+                    {% endif %}
+                {% else %}
+                    <div class="user-avatar bg-light d-flex align-items-center justify-content-center text-dark">
+                        <i class="fas fa-user"></i>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="flex-grow-1">
+                <h5 class="mb-1">{{ other_participant.get_full_name|default:other_participant.username }}</h5>
+                <small id="user-status">
+                    {% if other_participant.userprofile.is_online %}
+                        <span class="online-indicator"></span> Online
+                    {% else %}
+                        <span class="offline-indicator"></span> 
+                        Last seen {{ other_participant.userprofile.last_seen|timesince }} ago
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
+    <!-- Chat Body (flex-grow) -->
+    <div class="flex-grow-1 d-flex flex-column" style="min-height:0;">
+        <div class="chat-messages flex-grow-1" id="chat-messages" style="min-height:0;">
+            {% for message in messages reversed %}
+                {% with mid=message.id %}
+                <div class="d-flex mb-3 {% if message.sender == user %}justify-content-end{% endif %}" data-message-id="{{ mid }}">
+                    <div class="message-bubble {% if message.sender == user %}message-sent{% else %}message-received{% endif %} {% if message.is_unsent %}message-unsent{% endif %}">
+                        {% if message.sender == user %}
+                            <div class="message-actions">
+                                {% if message.message_type == 'text' and not message.is_unsent %}
+                                    <button class="edit-btn" onclick="showEditForm({{ mid }}, '{{ message.content|escapejs }}')" title="Edit message">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                {% endif %}
+                                <button class="unsend-btn {% if message.is_unsent %}disabled{% endif %}" onclick="unsendMessage({{ mid }})" title="Unsend message">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        {% endif %}
+                        <div class="message-content">
+                            {% if message.content %}
+                                <div>{{ message.content|linebreaks }}</div>
+                            {% endif %}
+                            {% if message.image %}
+                                <div>
+                                    <img src="{{ message.image.url }}" alt="Image" class="media-preview img-fluid">
+                                </div>
+                            {% endif %}
+                            {% if message.video %}
+                                <div>
+                                    <video controls class="media-preview">
+                                        <source src="{{ message.video.url }}" type="video/mp4">
+                                        Your browser does not support the video tag.
+                                    </video>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="unsent-indicator">This message was unsent</div>
+                        <div class="message-timestamp">
+                            {{ message.timestamp|date:"M d, H:i" }}
+                            {% if message.is_edited %}
+                                <span class="edited-indicator">(edited)</span>
+                            {% endif %}
+                            {% if message.sender == user %}
+                                <i class="fas fa-check text-success ms-1"></i>
+                            {% endif %}
+                        </div>
+                        <div class="edit-form" id="edit-form-{{ mid }}">
+                            <input type="text" class="edit-input" value="{{ message.content|escapejs }}">
+                            <div class="btn-group">
+                                <button class="btn btn-primary btn-sm" onclick="saveEdit({{ mid }})">Save</button>
+                                <button class="btn btn-secondary btn-sm" onclick="cancelEdit({{ mid }})">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endwith %}
+            {% endfor %}
+            <div class="typing-indicator" id="typing-indicator">
+                <span id="typing-user"></span> is typing...
+            </div>
+        </div>
+        <!-- Message Input -->
+        <div class="message-input-area">
+            <form id="message-form" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="conversation_id" value="{{ conversation.id }}">
+                <!-- File input: always present, visually hidden -->
+                <input type="file" id="file-input" accept="image/*,video/*" style="opacity:0;position:absolute;left:-9999px;" tabindex="-1">
+                <!-- File Upload Area -->
+                <div class="file-upload-area" id="file-upload-area" style="display: none;">
+                    <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                    <p class="mb-0">Drag and drop files here or click to select</p>
+                </div>
+                <div class="input-group">
+                    <button type="button" class="btn btn-outline-secondary" id="file-btn">
+                        <i class="fas fa-paperclip"></i>
+                    </button>
+                    <input type="text" class="form-control" name="content" id="message-input" 
+                           placeholder="Type your message..." autocomplete="off">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<div id="chat-meta" data-conversation-id="{{ conversation.id }}" data-current-user-id="{{ user.id }}" data-other-user-id="{{ other_participant.id }}"></div>
+<script>
+// Fetch Django variables from data attributes
+const chatMeta = document.getElementById('chat-meta');
+const conversationId = chatMeta.dataset.conversationId;
+const currentUserId = chatMeta.dataset.currentUserId;
+const otherUserId = chatMeta.dataset.otherUserId;
+
+// WebSocket connection for real-time chat
+const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+const chatSocket = new WebSocket(
+    wsScheme + '://' + window.location.host + '/ws/chat/' + conversationId + '/'
+);
+
+chatSocket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    
+    if (data.type === 'chat_message') {
+        addMessageToChat(data.message);
+        scrollToBottom();
+        // Play notification sound if the message is from another user
+        if (data.message.sender_id != currentUserId) {
+            const audio = document.getElementById('notification-audio');
+            if (audio) {
+                audio.currentTime = 0;
+                audio.play().catch(()=>{});
+            }
+        }
+    } else if (data.type === 'message_edited') {
+        updateMessageContent(data.message);
+    } else if (data.type === 'message_unsent') {
+        markMessageAsUnsent(data.message);
+    } else if (data.type === 'typing') {
+        showTypingIndicator(data.username);
+    } else if (data.type === 'stop_typing') {
+        hideTypingIndicator();
+    }
+};
+
+chatSocket.onclose = function(e) {
+    console.error('Chat socket closed unexpectedly');
+    alert('Chat connection lost. Please refresh the page.\n\nIf this keeps happening, make sure you are running the correct server (Daphne or Django 5+ runserver) and only one server is running on port 8000.');
+};
+
+// --- Robust WebSocket message queuing and connection check ---
+let messageQueue = [];
+
+// Modified onopen to flush queue
+chatSocket.onopen = function(e) {
+    while (messageQueue.length > 0) {
+        chatSocket.send(JSON.stringify(messageQueue.shift()));
+    }
+};
+
+document.getElementById('message-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const messageInput = document.getElementById('message-input');
+    const content = messageInput.value.trim();
+    const fileInput = document.getElementById('file-input');
+
+    console.log('Form submission - Content:', content);
+    console.log('Form submission - File input:', fileInput);
+    console.log('Form submission - Files:', fileInput ? fileInput.files : 'No file input');
+
+    if (!content && (!fileInput || !fileInput.files.length)) {
+        console.log('No content or file provided');
+        return;
+    }
+
+    // Check if there's a file to upload
+    if (fileInput && fileInput.files.length > 0) {
+        console.log('Processing file upload...');
+        // Send via AJAX for file uploads
+        const file = fileInput.files[0];
+        console.log('File details:', {
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            sizeMB: (file.size / 1024 / 1024).toFixed(2)
+        });
+        
+        const isImage = file.type.startsWith('image/');
+        const isVideo = file.type.startsWith('video/');
+        
+        console.log('File type check - isImage:', isImage, 'isVideo:', isVideo);
+        
+        if (!isImage && !isVideo) {
+            alert('Please select an image or video file.');
+            return;
+        }
+        
+        // Check file size (max 10MB)
+        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+        if (file.size > maxSize) {
+            alert('media size is too large, please use 10MB or below size files');
+            return;
+        }
+        
+        // Create a new FormData for the file upload
+        const uploadFormData = new FormData();
+        uploadFormData.append('conversation_id', formData.get('conversation_id'));
+        uploadFormData.append('content', content);
+        uploadFormData.append('csrfmiddlewaretoken', formData.get('csrfmiddlewaretoken'));
+        
+        if (isImage) {
+            uploadFormData.append('image', file);
+            console.log('Appending image file:', file.name);
+        } else if (isVideo) {
+            uploadFormData.append('video', file);
+            console.log('Appending video file:', file.name);
+        }
+        
+        console.log('FormData contents:');
+        for (let [key, value] of uploadFormData.entries()) {
+            console.log(key, ':', value);
+        }
+        
+        // Show loading state
+        const submitBtn = document.querySelector('#message-form button[type="submit"]');
+        const originalBtnText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        submitBtn.disabled = true;
+        
+        console.log('Sending fetch request to:', '{% url "chat:send_message" %}');
+        
+        fetch('{% url "chat:send_message" %}', {
+            method: 'POST',
+            body: uploadFormData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            // Restore button state
+            submitBtn.innerHTML = originalBtnText;
+            submitBtn.disabled = false;
+            
+            if (data.success) {
+                messageInput.value = '';
+                fileInput.value = '';
+                hideFileUploadArea();
+            } else {
+                alert('Error sending message: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Restore button state
+            submitBtn.innerHTML = originalBtnText;
+            submitBtn.disabled = false;
+            alert('Error sending message. Please try again.');
+        });
+    } else {
+        console.log('Sending text message via WebSocket...');
+        // Send via WebSocket for text messages only
+        const messageData = {
+            'type': 'chat_message',
+            'message': {
+                'content': content
+            }
+        };
+        if (chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.send(JSON.stringify(messageData));
+        } else if (chatSocket.readyState === WebSocket.CONNECTING) {
+            messageQueue.push(messageData); // Will be sent when socket opens
+        } else {
+            alert('Chat connection lost. Please refresh the page.');
+        }
+        messageInput.value = '';
+    }
+});
+
+// Typing indicator
+let typingTimer;
+const messageInput = document.getElementById('message-input');
+
+messageInput.addEventListener('input', function() {
+    chatSocket.send(JSON.stringify({
+        'type': 'typing'
+    }));
+    
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+        chatSocket.send(JSON.stringify({
+            'type': 'stop_typing'
+        }));
+    }, 1000);
+});
+
+// File upload functionality
+const fileBtn = document.getElementById('file-btn');
+const fileUploadArea = document.getElementById('file-upload-area');
+const fileInput = document.getElementById('file-input');
+
+fileBtn.addEventListener('click', function() {
+    if (fileUploadArea.style.display === 'none') {
+        showFileUploadArea();
+    } else {
+        hideFileUploadArea();
+    }
+});
+
+fileUploadArea.addEventListener('click', function() {
+    fileInput.click();
+});
+
+fileInput.addEventListener('change', function() {
+    if (this.files.length > 0) {
+        const fileName = this.files[0].name;
+        const file = this.files[0];
+        const isImage = file.type.startsWith('image/');
+        const isVideo = file.type.startsWith('video/');
+        
+        let icon = 'fas fa-file';
+        if (isImage) icon = 'fas fa-image';
+        else if (isVideo) icon = 'fas fa-video';
+        
+        fileUploadArea.innerHTML = `
+            <i class="${icon} fa-2x text-success mb-2"></i>
+            <p class="mb-0">Selected: ${fileName}</p>
+            <small class="text-muted">${(file.size / 1024 / 1024).toFixed(2)} MB</small>
+        `;
+        fileUploadArea.classList.add('has-file');
+    } else {
+        fileUploadArea.classList.remove('has-file');
+    }
+});
+
+// Drag and drop functionality
+fileUploadArea.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    this.classList.add('dragover');
+});
+
+fileUploadArea.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    this.classList.remove('dragover');
+});
+
+fileUploadArea.addEventListener('drop', function(e) {
+    e.preventDefault();
+    this.classList.remove('dragover');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        fileInput.files = files;
+        const fileName = files[0].name;
+        const file = files[0];
+        const isImage = file.type.startsWith('image/');
+        const isVideo = file.type.startsWith('video/');
+        
+        let icon = 'fas fa-file';
+        if (isImage) icon = 'fas fa-image';
+        else if (isVideo) icon = 'fas fa-video';
+        
+        this.innerHTML = `
+            <i class="${icon} fa-2x text-success mb-2"></i>
+            <p class="mb-0">Selected: ${fileName}</p>
+            <small class="text-muted">${(file.size / 1024 / 1024).toFixed(2)} MB</small>
+        `;
+        this.classList.add('has-file');
+    }
+});
+
+function showFileUploadArea() {
+    fileUploadArea.style.display = 'block';
+    fileBtn.innerHTML = '<i class="fas fa-times"></i>';
+}
+
+function hideFileUploadArea() {
+    fileUploadArea.style.display = 'none';
+    fileBtn.innerHTML = '<i class="fas fa-paperclip"></i>';
+    fileInput.value = '';
+    fileUploadArea.classList.remove('has-file');
+    fileUploadArea.innerHTML = `
+        <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+        <p class="mb-0">Drag and drop files here or click to select</p>
+    `;
+}
+
+function addMessageToChat(message) {
+    const chatMessages = document.getElementById('chat-messages');
+    const isCurrentUser = message.sender_id == currentUserId;
+
+    const messageWrapper = document.createElement('div');
+    messageWrapper.className = `d-flex mb-3 ${isCurrentUser ? 'justify-content-end' : 'align-items-start'}`;
+
+    let contentHtml = '';
+    if (message.content) {
+        contentHtml = `<div>${message.content}</div>`;
+    }
+
+    let mediaContent = '';
+    if (message.image_url) {
+        mediaContent = `<div><img src="${message.image_url}" alt="Image" class="media-preview img-fluid"></div>`;
+    } else if (message.video_url) {
+        mediaContent = `<div><video controls class="media-preview"><source src="${message.video_url}" type="video/mp4"></video></div>`;
+    }
+
+    const messageBubbleHtml = `
+        <div class="message-bubble ${isCurrentUser ? 'message-sent' : 'message-received'}">
+            ${contentHtml}
+            ${mediaContent}
+            <div class="message-timestamp">
+                ${message.timestamp}
+                ${isCurrentUser ? ' <i class="fas fa-check text-success ms-1"></i>' : ''}
+            </div>
+        </div>
+    `;
+
+    messageWrapper.innerHTML = messageBubbleHtml;
+    chatMessages.appendChild(messageWrapper);
+}
+
+function scrollToBottom() {
+    const chatMessages = document.getElementById('chat-messages');
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function showTypingIndicator(username) {
+    const typingIndicator = document.getElementById('typing-indicator');
+    typingIndicator.style.display = 'block';
+    typingIndicator.innerHTML = `<span id="typing-user">${username}</span> is typing...`;
+}
+
+function hideTypingIndicator() {
+    const typingIndicator = document.getElementById('typing-indicator');
+    typingIndicator.style.display = 'none';
+}
+
+// Message editing and unsending functions
+function showEditForm(messageId, currentContent) {
+    const editForm = document.getElementById(`edit-form-${messageId}`);
+    const editInput = editForm.querySelector('.edit-input');
+    editInput.value = currentContent;
+    editForm.style.display = 'block';
+    editInput.focus();
+    editInput.select();
+}
+
+function cancelEdit(messageId) {
+    const editForm = document.getElementById(`edit-form-${messageId}`);
+    editForm.style.display = 'none';
+}
+
+function saveEdit(messageId) {
+    const editForm = document.getElementById(`edit-form-${messageId}`);
+    const editInput = editForm.querySelector('.edit-input');
+    const newContent = editInput.value.trim();
+    
+    if (!newContent) {
+        alert('Message cannot be empty');
+        return;
+    }
+    
+    // Send edit request via AJAX
+    const formData = new FormData();
+    formData.append('message_id', messageId);
+    formData.append('content', newContent);
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    fetch('{% url "chat:edit_message" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            editForm.style.display = 'none';
+            // The WebSocket will handle updating the message content
+        } else {
+            alert('Error editing message: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error editing message. Please try again.');
+    });
+}
+
+function unsendMessage(messageId) {
+    if (!confirm('Are you sure you want to unsend this message? This action cannot be undone.')) {
+        return;
+    }
+    
+    // Send unsend request via AJAX
+    const formData = new FormData();
+    formData.append('message_id', messageId);
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    fetch('{% url "chat:unsend_message" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // The WebSocket will handle marking the message as unsent
+        } else {
+            alert('Error unsending message: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error unsending message. Please try again.');
+    });
+}
+
+function updateMessageContent(messageData) {
+    const messageElement = document.querySelector(`[data-message-id="${messageData.id}"]`);
+    if (messageElement) {
+        const messageBubble = messageElement.querySelector('.message-bubble');
+        const contentDiv = messageBubble.querySelector('.message-content div');
+        const timestampDiv = messageBubble.querySelector('.message-timestamp');
+        
+        if (contentDiv) {
+            contentDiv.textContent = messageData.content;
+        }
+        
+        // Add edited indicator
+        if (messageData.is_edited) {
+            let editedIndicator = timestampDiv.querySelector('.edited-indicator');
+            if (!editedIndicator) {
+                editedIndicator = document.createElement('span');
+                editedIndicator.className = 'edited-indicator';
+                editedIndicator.textContent = ' (edited)';
+                timestampDiv.appendChild(editedIndicator);
+            }
+        }
+    }
+}
+
+function markMessageAsUnsent(messageData) {
+    const messageElement = document.querySelector(`[data-message-id="${messageData.id}"]`);
+    if (messageElement) {
+        const messageBubble = messageElement.querySelector('.message-bubble');
+        const messageContent = messageBubble.querySelector('.message-content');
+        const unsentIndicator = messageBubble.querySelector('.unsent-indicator');
+        const editForm = messageBubble.querySelector('.edit-form');
+        const editBtn = messageBubble.querySelector('.edit-btn');
+        const unsendBtn = messageBubble.querySelector('.unsend-btn');
+        
+        // Hide message content and show unsent indicator
+        messageContent.style.display = 'none';
+        unsentIndicator.style.display = 'block';
+        
+        // Add unsent class
+        messageBubble.classList.add('message-unsent');
+        
+        // Hide edit form if it's open
+        if (editForm) {
+            editForm.style.display = 'none';
+        }
+        
+        // Disable edit and unsend buttons
+        if (editBtn) {
+            editBtn.style.display = 'none';
+        }
+        if (unsendBtn) {
+            unsendBtn.classList.add('disabled');
+            unsendBtn.disabled = true;
+        }
+    }
+}
+
+// Update addMessageToChat function to include edit/unsend functionality
+function addMessageToChat(message) {
+    const chatMessages = document.getElementById('chat-messages');
+    const isCurrentUser = message.sender_id == currentUserId;
+
+    const messageWrapper = document.createElement('div');
+    messageWrapper.className = `d-flex mb-3 ${isCurrentUser ? 'justify-content-end' : 'align-items-start'}`;
+    messageWrapper.setAttribute('data-message-id', message.id);
+
+    let contentHtml = '';
+    if (message.content) {
+        contentHtml = `<div>${message.content}</div>`;
+    }
+
+    let mediaContent = '';
+    if (message.image_url) {
+        mediaContent = `<div><img src="${message.image_url}" alt="Image" class="media-preview img-fluid"></div>`;
+    } else if (message.video_url) {
+        mediaContent = `<div><video controls class="media-preview"><source src="${message.video_url}" type="video/mp4"></video></div>`;
+    }
+
+    let actionsHtml = '';
+    if (isCurrentUser) {
+        actionsHtml = `
+            <div class="message-actions">
+                <button class="edit-btn" onclick="showEditForm(${message.id}, '${message.content || ''}')" title="Edit message">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="unsend-btn" onclick="unsendMessage(${message.id})" title="Unsend message">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+    }
+
+    let editedIndicator = '';
+    if (message.is_edited) {
+        editedIndicator = '<span class="edited-indicator"> (edited)</span>';
+    }
+
+    const messageBubbleHtml = `
+        <div class="message-bubble ${isCurrentUser ? 'message-sent' : 'message-received'} ${message.is_unsent ? 'message-unsent' : ''}">
+            ${actionsHtml}
+            <div class="message-content" ${message.is_unsent ? 'style="display: none;"' : ''}>
+                ${contentHtml}
+                ${mediaContent}
+            </div>
+            <div class="unsent-indicator" ${message.is_unsent ? 'style="display: block;"' : 'style="display: none;"'}>This message was unsent</div>
+            <div class="message-timestamp">
+                ${message.timestamp}${editedIndicator}
+                ${isCurrentUser ? ' <i class="fas fa-check text-success ms-1"></i>' : ''}
+            </div>
+            <div class="edit-form" id="edit-form-${message.id}" style="display: none;">
+                <input type="text" class="edit-input" value="${message.content || ''}">
+                <div class="btn-group">
+                    <button class="btn btn-primary btn-sm" onclick="saveEdit(${message.id})">Save</button>
+                    <button class="btn btn-secondary btn-sm" onclick="cancelEdit(${message.id})">Cancel</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    messageWrapper.innerHTML = messageBubbleHtml;
+    chatMessages.appendChild(messageWrapper);
+}
+</script>
+<audio id="notification-audio" src="/static/audios/web_notification.mp3" preload="auto"></audio>
+{% endblock %}

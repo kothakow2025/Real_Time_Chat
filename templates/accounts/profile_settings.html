@@ -1,0 +1,396 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Profile Settings - Kotha Kow{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-header {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        border-radius: 15px 15px 0 0;
+        padding: 30px;
+        text-align: center;
+    }
+    
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        border: 4px solid white;
+        margin-bottom: 15px;
+    }
+    
+    .settings-section {
+        background-color: white;
+        border-radius: 0 0 15px 15px;
+        padding: 30px;
+    }
+    
+    .section-title {
+        color: #667eea;
+        border-bottom: 2px solid #f8f9fa;
+        padding-bottom: 10px;
+        margin-bottom: 25px;
+    }
+    
+    .form-section {
+        margin-bottom: 40px;
+    }
+    
+    .btn-update {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border: none;
+        border-radius: 25px;
+        padding: 12px 30px;
+        color: white;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-update:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    .current-avatar {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    
+    .avatar-preview {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        border: 3px solid #dee2e6;
+        object-fit: cover;
+    }
+    
+    .file-input-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+    }
+    
+    .file-input-wrapper input[type=file] {
+        position: absolute;
+        left: -9999px;
+    }
+    
+    .file-input-label {
+        background-color: #f8f9fa;
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .file-input-label:hover {
+        border-color: #667eea;
+        background-color: #f0f4ff;
+    }
+    
+    .danger-zone {
+        border: 1px solid #dc3545;
+        border-radius: 10px;
+        padding: 20px;
+        background-color: #fff5f5;
+    }
+    
+    .danger-zone h5 {
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+        <div class="card">
+            <!-- Profile Header -->
+            <div class="profile-header">
+                {% if user.userprofile.profile_picture %}
+                    <img src="{{ user.userprofile.profile_picture.url }}" 
+                         alt="{{ user.username }}" 
+                         class="profile-avatar">
+                {% else %}
+                    <div class="profile-avatar bg-light d-flex align-items-center justify-content-center text-dark mx-auto">
+                        <i class="fas fa-user fa-3x"></i>
+                    </div>
+                {% endif %}
+                <h3>{{ user.get_full_name|default:user.username }}</h3>
+                <p class="mb-0">@{{ user.username }}</p>
+            </div>
+            
+            <!-- Settings Content -->
+            <div class="settings-section">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Personal Information -->
+                    <div class="form-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-user me-2"></i>
+                            Personal Information
+                        </h4>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ user_form.first_name|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ user_form.last_name|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ user_form.username|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ user_form.email|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Profile Picture -->
+                    <div class="form-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-camera me-2"></i>
+                            Profile Picture
+                        </h4>
+                        
+                        {% if user.userprofile.profile_picture %}
+                            <div class="current-avatar">
+                                <img src="{{ user.userprofile.profile_picture.url }}" 
+                                     alt="Current Avatar" 
+                                     class="avatar-preview">
+                                <p class="text-muted mt-2">Current profile picture</p>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="file-input-wrapper">
+                            {{ profile_form.profile_picture|as_crispy_field }}
+                            <label for="{{ profile_form.profile_picture.id_for_label }}" class="file-input-label">
+                                <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                                <p class="mb-0">Click to upload a new profile picture</p>
+                                <small class="text-muted">JPG, PNG or GIF (Max 5MB)</small>
+                            </label>
+                        </div>
+                        
+                        {% if profile_form.profile_picture.help_text %}
+                            <small class="form-text text-muted">{{ profile_form.profile_picture.help_text }}</small>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Bio Section -->
+                    <div class="form-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-info-circle me-2"></i>
+                            About Me
+                        </h4>
+                        
+                        {{ profile_form.bio|as_crispy_field }}
+                    </div>
+                    
+                    <!-- Privacy Settings -->
+                    <div class="form-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            Privacy Settings
+                        </h4>
+                        
+                        <div class="form-check form-switch mb-3">
+                            {{ profile_form.show_online_status }}
+                            <label class="form-check-label" for="{{ profile_form.show_online_status.id_for_label }}">
+                                Show when I'm online
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Save Button -->
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-update">
+                            <i class="fas fa-save me-2"></i>
+                            Update Profile
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Danger Zone -->
+                <div class="form-section mt-5">
+                    <div class="danger-zone">
+                        <h5>
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Danger Zone
+                        </h5>
+                        <p class="text-muted mb-3">
+                            These actions are irreversible. Please be careful.
+                        </p>
+                        
+                        <div class="d-flex gap-3">
+                            <a href="{% url 'accounts:password_change' %}" class="btn btn-outline-warning">
+                                <i class="fas fa-key me-2"></i>
+                                Change Password
+                            </a>
+                            
+                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                                <i class="fas fa-trash me-2"></i>
+                                Delete Account
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Delete Account
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Are you sure you want to delete your account?</strong></p>
+                <p class="text-muted">
+                    This action cannot be undone. All your messages, conversations, and profile data will be permanently deleted.
+                </p>
+                <div class="alert alert-danger">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>This action is irreversible!</strong>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                <form method="post" action="{% url 'accounts:delete_account' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>
+                        Delete My Account
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// File input preview
+document.getElementById('{{ profile_form.profile_picture.id_for_label }}').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // Update the current avatar preview
+            const currentAvatar = document.querySelector('.current-avatar');
+            if (currentAvatar) {
+                const img = currentAvatar.querySelector('img');
+                if (img) {
+                    img.src = e.target.result;
+                }
+            } else {
+                // Create new preview if no current avatar
+                const previewDiv = document.createElement('div');
+                previewDiv.className = 'current-avatar';
+                previewDiv.innerHTML = `
+                    <img src="${e.target.result}" alt="Preview" class="avatar-preview">
+                    <p class="text-muted mt-2">New profile picture preview</p>
+                `;
+                
+                const fileWrapper = document.querySelector('.file-input-wrapper');
+                fileWrapper.parentNode.insertBefore(previewDiv, fileWrapper);
+            }
+        };
+        reader.readAsDataURL(file);
+        
+        // Update file input label
+        const label = document.querySelector('.file-input-label');
+        label.innerHTML = `
+            <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+            <p class="mb-0">Selected: ${file.name}</p>
+            <small class="text-muted">Click to choose a different file</small>
+        `;
+    }
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const username = document.getElementById('{{ user_form.username.id_for_label }}').value;
+    const email = document.getElementById('{{ user_form.email.id_for_label }}').value;
+    
+    if (!username.trim()) {
+        e.preventDefault();
+        alert('Username is required.');
+        return;
+    }
+    
+    if (!email.trim()) {
+        e.preventDefault();
+        alert('Email is required.');
+        return;
+    }
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        e.preventDefault();
+        alert('Please enter a valid email address.');
+        return;
+    }
+});
+
+// Auto-save draft (optional feature)
+let saveTimeout;
+const formInputs = document.querySelectorAll('input, textarea, select');
+
+formInputs.forEach(input => {
+    input.addEventListener('input', function() {
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => {
+            // Save draft to localStorage
+            const formData = new FormData(document.querySelector('form'));
+            const draftData = {};
+            for (let [key, value] of formData.entries()) {
+                if (key !== 'csrfmiddlewaretoken' && key !== 'profile_picture') {
+                    draftData[key] = value;
+                }
+            }
+            localStorage.setItem('profile_draft', JSON.stringify(draftData));
+        }, 1000);
+    });
+});
+
+// Load draft on page load
+window.addEventListener('load', function() {
+    const draft = localStorage.getItem('profile_draft');
+    if (draft) {
+        const draftData = JSON.parse(draft);
+        Object.keys(draftData).forEach(key => {
+            const input = document.querySelector(`[name="${key}"]`);
+            if (input && input.type !== 'file') {
+                input.value = draftData[key];
+            }
+        });
+    }
+});
+
+// Clear draft on successful submit
+document.querySelector('form').addEventListener('submit', function() {
+    localStorage.removeItem('profile_draft');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Kotha Kow{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="text-white">
+                <i class="fas fa-comments"></i> Your Conversations
+            </h1>
+            <a href="{% url 'accounts:user_list' %}" class="btn btn-light">
+                <i class="fas fa-user-plus"></i> Find Friends
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                {% if conversation_data %}
+                    <div class="list-group list-group-flush">
+                        {% for data in conversation_data %}
+                            <a href="{% url 'chat:conversation_detail' data.conversation.id %}" 
+                               class="list-group-item list-group-item-action conversation-item border-0 p-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0 me-3">
+                                        {% if data.other_participant.userprofile.profile_picture %}
+                                            <img src="{{ data.other_participant.userprofile.profile_picture.url }}" 
+                                                 alt="{{ data.other_participant.username }}" 
+                                                 class="user-avatar">
+                                        {% else %}
+                                            <div class="user-avatar bg-secondary d-flex align-items-center justify-content-center text-white">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <!-- Online/Offline Indicator -->
+                                        {% if data.other_participant.userprofile.is_online %}
+                                            <span class="online-indicator position-absolute" style="margin-left: -15px; margin-top: -10px;"></span>
+                                        {% else %}
+                                            <span class="offline-indicator position-absolute" style="margin-left: -15px; margin-top: -10px;"></span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h6 class="mb-1 fw-bold">
+                                                    {{ data.other_participant.get_full_name|default:data.other_participant.username }}
+                                                </h6>
+                                                {% if data.last_message %}
+                                                    <p class="mb-1 text-muted small">
+                                                        {% if data.last_message.content %}
+                                                            {% if data.last_message.content|length > 50 %}
+                                                                {{ data.last_message.content|slice:":50" }}...
+                                                            {% else %}
+                                                                {{ data.last_message.content }}
+                                                            {% endif %}
+                                                        {% elif data.last_message.image %}
+                                                            <i class="fas fa-image"></i> Image
+                                                        {% elif data.last_message.video %}
+                                                            <i class="fas fa-video"></i> Video
+                                                        {% endif %}
+                                                    </p>
+                                                    <small class="text-muted">
+                                                        {{ data.last_message.timestamp|timesince }} ago
+                                                    </small>
+                                                {% else %}
+                                                    <p class="mb-1 text-muted small">No messages yet</p>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <div class="text-end">
+                                                {% if data.unread_count > 0 %}
+                                                    <span class="unread-badge">{{ data.unread_count }}</span>
+                                                {% endif %}
+                                                <div class="mt-1">
+                                                    <i class="fas fa-chevron-right text-muted small"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-comments fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">No conversations yet</h4>
+                        <p class="text-muted mb-4">Start chatting by adding friends!</p>
+                        <a href="{% url 'accounts:user_list' %}" class="btn btn-primary">
+                            <i class="fas fa-user-plus"></i> Find Friends
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// WebSocket connection for real-time notifications
+const notificationSocket = new WebSocket(
+    'ws://' + window.location.host + '/ws/notifications/'
+);
+
+notificationSocket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    
+    if (data.type === 'new_message') {
+        // Refresh the page to show new message
+        location.reload();
+    } else if (data.type === 'friend_request') {
+        // Show notification for friend request
+        showNotification(data.message, 'info');
+    }
+};
+
+notificationSocket.onclose = function(e) {
+    console.error('Notification socket closed unexpectedly');
+};
+
+function showNotification(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}

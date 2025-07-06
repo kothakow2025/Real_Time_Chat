@@ -1,0 +1,579 @@
+{% extends 'base.html' %}
+
+{% block title %}Find Friends - Kotha Kow{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-header {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        border-radius: 15px 15px 0 0;
+        padding: 30px;
+        text-align: center;
+    }
+    
+    .search-content {
+        background-color: white;
+        border-radius: 0 0 15px 15px;
+        padding: 30px;
+    }
+    
+    .search-box {
+        position: relative;
+        margin-bottom: 30px;
+    }
+    
+    .search-input {
+        border-radius: 25px;
+        padding: 15px 50px 15px 20px;
+        border: 2px solid #f8f9fa;
+        font-size: 16px;
+        transition: all 0.3s ease;
+    }
+    
+    .search-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .search-btn {
+        position: absolute;
+        right: 5px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        color: white;
+    }
+    
+    .user-card {
+        border: 1px solid #f8f9fa;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+        background-color: white;
+    }
+    
+    .user-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        border-color: #667eea;
+    }
+    
+    .user-info {
+        flex-grow: 1;
+    }
+    
+    .user-name {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 5px;
+    }
+    
+    .user-username {
+        color: #6c757d;
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+    
+    .user-bio {
+        color: #6c757d;
+        font-size: 14px;
+        margin-bottom: 15px;
+    }
+    
+    .user-status {
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .btn-connect {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border: none;
+        border-radius: 25px;
+        padding: 8px 20px;
+        color: white;
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-connect:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    .btn-pending {
+        background-color: #ffc107;
+        border: none;
+        border-radius: 25px;
+        padding: 8px 20px;
+        color: #212529;
+        font-size: 14px;
+        cursor: not-allowed;
+    }
+    
+    .btn-friends {
+        background-color: #28a745;
+        border: none;
+        border-radius: 25px;
+        padding: 8px 20px;
+        color: white;
+        font-size: 14px;
+    }
+    
+    .btn-message {
+        background-color: #17a2b8;
+        border: none;
+        border-radius: 25px;
+        padding: 8px 20px;
+        color: white;
+        font-size: 14px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-message:hover {
+        background-color: #138496;
+        color: white;
+        text-decoration: none;
+        transform: translateY(-1px);
+    }
+    
+    .no-users {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6c757d;
+    }
+    
+    .filter-tabs {
+        margin-bottom: 30px;
+    }
+    
+    .filter-tab {
+        background-color: transparent;
+        border: 2px solid #f8f9fa;
+        border-radius: 25px;
+        padding: 10px 20px;
+        margin-right: 10px;
+        color: #6c757d;
+        transition: all 0.3s ease;
+    }
+    
+    .filter-tab.active {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border-color: transparent;
+        color: white;
+    }
+    
+    .user-stats {
+        display: flex;
+        gap: 15px;
+        font-size: 12px;
+        color: #6c757d;
+        margin-top: 10px;
+    }
+    
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-10">
+        <div class="card">
+            <!-- Search Header -->
+            <div class="search-header">
+                <h2><i class="fas fa-users me-2"></i>Find Friends</h2>
+                <p class="mb-0">Connect with people and start conversations</p>
+            </div>
+            
+            <!-- Search Content -->
+            <div class="search-content">
+                <!-- Search Box -->
+                <div class="search-box">
+                    <form method="get" class="d-flex">
+                        <div class="position-relative flex-grow-1">
+                            <input type="text" 
+                                   name="search" 
+                                   class="form-control search-input" 
+                                   placeholder="Search by name, username, or email..." 
+                                   value="{{ request.GET.search }}">
+                            <button type="submit" class="search-btn">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Filter Tabs -->
+                <div class="filter-tabs">
+                    <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}filter=all" 
+                       class="btn filter-tab {% if not request.GET.filter or request.GET.filter == 'all' %}active{% endif %}">
+                        All Users
+                    </a>
+                    <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}filter=online" 
+                       class="btn filter-tab {% if request.GET.filter == 'online' %}active{% endif %}">
+                        Online
+                    </a>
+                    <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}filter=recent" 
+                       class="btn filter-tab {% if request.GET.filter == 'recent' %}active{% endif %}">
+                        Recently Active
+                    </a>
+                </div>
+                
+                <!-- Users List -->
+                {% if user_data %}
+                    <div class="users-list">
+                        {% for user_data in user_data %}
+                            <div class="user-card">
+                                <div class="d-flex align-items-center">
+                                    <!-- User Avatar -->
+                                    <div class="flex-shrink-0 me-3">
+                                        {% if user_data.user.userprofile.profile_picture %}
+                                            <img src="{{ user_data.user.userprofile.profile_picture.url }}" 
+                                                 alt="{{ user_data.user.username }}" 
+                                                 class="user-avatar">
+                                        {% else %}
+                                            <div class="user-avatar bg-light d-flex align-items-center justify-content-center text-dark">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- User Info -->
+                                    <div class="user-info">
+                                        <div class="user-name">
+                                            {{ user_data.user.get_full_name|default:user_data.user.username }}
+                                        </div>
+                                        <div class="user-username">@{{ user_data.user.username }}</div>
+                                        
+                                        {% if user_data.user.userprofile.bio %}
+                                            <div class="user-bio">{{ user_data.user.userprofile.bio|truncatechars:100 }}</div>
+                                        {% endif %}
+                                        
+                                        <div class="user-status">
+                                            {% if user_data.user.userprofile.is_online %}
+                                                <span class="online-indicator"></span>
+                                                <span>Online</span>
+                                            {% else %}
+                                                <span class="offline-indicator"></span>
+                                                <span>Last seen {{ user_data.user.userprofile.last_seen|timesince }} ago</span>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="user-stats">
+                                            <div class="stat-item">
+                                                <i class="fas fa-calendar-alt"></i>
+                                                <span>Joined {{ user_data.user.date_joined|date:"M Y" }}</span>
+                                            </div>
+                                            {% if user_data.user.userprofile.show_online_status %}
+                                                <div class="stat-item">
+                                                    <i class="fas fa-eye"></i>
+                                                    <span>Public profile</span>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Action Buttons -->
+                                    <div class="flex-shrink-0">
+                                        {% if user_data.status == 'friends' %}
+                                            <div class="d-flex flex-column gap-2">
+                                                <span class="btn btn-friends" style="cursor: default;">
+                                                    <i class="fas fa-check me-1"></i>Friends
+                                                </span>
+                                                <a href="{% url 'chat:start_conversation' user_data.user.id %}" class="btn-message">
+                                                    <i class="fas fa-comment me-1"></i>Message
+                                                </a>
+                                                <form method="post" action="{% url 'accounts:unfriend_user' %}" class="unfriend-form mt-2" onsubmit="return false;">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="user_id" value="{{ user_data.user.id }}">
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                                                        <i class="fas fa-user-minus"></i> Unfriend
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        {% elif user_data.status == 'pending_sent' %}
+                                            <span class="btn btn-pending">
+                                                <i class="fas fa-clock me-1"></i>Pending
+                                            </span>
+                                        {% elif user_data.status == 'pending_received' %}
+                                            <div class="d-flex flex-column gap-2">
+                                                <form method="post" action="{% url 'accounts:respond_friend_request' %}" data-start-chat-url="{% url 'chat:start_conversation' user_data.user.id %}" onsubmit="return false;">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="request_id" value="{{ user_data.request_id }}">
+                                                    <input type="hidden" name="action" value="accept">
+                                                    <button type="submit" class="btn btn-success btn-sm w-100 mb-1">
+                                                        <i class="fas fa-check"></i> Accept
+                                                    </button>
+                                                </form>
+                                                <form method="post" action="{% url 'accounts:respond_friend_request' %}" onsubmit="return false;">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="request_id" value="{{ user_data.request_id }}">
+                                                    <input type="hidden" name="action" value="reject">
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                                                        <i class="fas fa-times"></i> Decline
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        {% else %}
+                                            <form method="post" action="{% url 'accounts:send_friend_request' %}" onsubmit="return false;">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="to_user" value="{{ user_data.user.id }}">
+                                                <button type="submit" class="btn btn-connect">
+                                                    <i class="fas fa-user-plus me-1"></i>Connect
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if is_paginated %}
+                        <nav aria-label="Users pagination" class="mt-4">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.filter %}filter={{ request.GET.filter }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ num }}</span>
+                                        </li>
+                                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.filter %}filter={{ request.GET.filter }}&{% endif %}page={{ num }}">{{ num }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.filter %}filter={{ request.GET.filter }}&{% endif %}page={{ page_obj.next_page_number }}">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    {% endif %}
+                {% else %}
+                    <div class="no-users">
+                        <i class="fas fa-users fa-3x mb-3"></i>
+                        <h4>No users found</h4>
+                        {% if request.GET.search %}
+                            <p>No users match your search criteria "{{ request.GET.search }}"</p>
+                            <a href="{% url 'accounts:user_list' %}" class="btn btn-connect">
+                                <i class="fas fa-refresh me-2"></i>Show All Users
+                            </a>
+                        {% else %}
+                            <p>There are no other users to display at the moment.</p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit search form with debounce
+    let searchTimeout;
+    const searchInput = document.querySelector('.search-input');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                this.form.submit();
+            }, 500); // 500ms delay
+        });
+    }
+
+    // Unified handler for friend request forms
+    document.body.addEventListener('submit', function(e) {
+        // Only act on forms within a user-card for friend actions
+        if (!e.target.closest('.user-card') || !e.target.matches('form')) {
+            return;
+        }
+        console.log('AJAX intercept: friend request form submitted');
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData(form);
+        const button = form.querySelector('button[type="submit"]');
+        const actionContainer = form.closest('.flex-shrink-0');
+        
+        const allButtonsInForm = form.parentElement.querySelectorAll('button');
+        allButtonsInForm.forEach(btn => btn.disabled = true);
+        
+        const originalButtonHTML = button.innerHTML;
+        button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>`;
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+            }
+        })
+        .then(response => response.ok ? response.json() : response.json().then(err => Promise.reject(err)))
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'success');
+                
+                const action = formData.get('action');
+
+                if (form.action.includes('send_friend_request')) {
+                    actionContainer.innerHTML = `
+                        <span class="btn btn-pending">
+                            <i class="fas fa-clock me-1"></i>Pending
+                        </span>`;
+                } else if (form.action.includes('respond_friend_request')) {
+                    if (action === 'accept') {
+                        const startChatUrl = form.dataset.startChatUrl;
+                        actionContainer.innerHTML = `
+                            <div class="d-flex flex-column gap-2">
+                                <span class="btn btn-friends" style="cursor: default;">
+                                    <i class="fas fa-check me-1"></i>Friends
+                                </span>
+                                <a href="${startChatUrl}" class="btn-message">
+                                    <i class="fas fa-comment me-1"></i>Message
+                                </a>
+                            </div>`;
+                    } else { // 'reject'
+                        actionContainer.innerHTML = `<span class="text-muted fst-italic">Request declined</span>`;
+                    }
+                }
+            } else {
+                throw new Error(data.message || 'An unknown error occurred.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification(error.message || 'An error occurred. Please try again.', 'error');
+            allButtonsInForm.forEach((btn) => {
+                btn.disabled = false;
+                // For the button that was clicked, restore its original content
+                if (btn === button) {
+                    btn.innerHTML = originalButtonHTML;
+                }
+            });
+        });
+    });
+
+    // Unfriend AJAX handler
+    document.body.addEventListener('submit', function(e) {
+        if (e.target.classList.contains('unfriend-form')) {
+            e.preventDefault();
+            
+            if (!confirm('Are you sure you want to unfriend this user? This will permanently delete all conversations and media files between you.')) {
+                return;
+            }
+            
+            const form = e.target;
+            const formData = new FormData(form);
+            const button = form.querySelector('button[type="submit"]');
+            const actionContainer = form.closest('.flex-shrink-0');
+            const originalButtonHTML = button.innerHTML;
+            button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>`;
+            button.disabled = true;
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                }
+            })
+            .then(response => response.ok ? response.json() : response.json().then(err => Promise.reject(err)))
+            .then(data => {
+                if (data.success) {
+                    showNotification(data.message, 'success');
+                    // Replace with Connect button
+                    actionContainer.innerHTML = `
+                        <form method="post" action="/accounts/send-friend-request/" onsubmit="return false;">
+                            <input type="hidden" name="csrfmiddlewaretoken" value="${formData.get('csrfmiddlewaretoken')}">
+                            <input type="hidden" name="to_user" value="${formData.get('user_id')}">
+                            <button type="submit" class="btn btn-connect">
+                                <i class="fas fa-user-plus me-1"></i>Connect
+                            </button>
+                        </form>
+                    `;
+                } else {
+                    throw new Error(data.message || 'An unknown error occurred.');
+                }
+            })
+            .catch(error => {
+                showNotification(error.message || 'An error occurred. Please try again.', 'error');
+                button.disabled = false;
+                button.innerHTML = originalButtonHTML;
+            });
+        }
+    });
+
+    // Notification function
+    function showNotification(message, type = 'info') {
+        let container = document.getElementById('notification-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'notification-container';
+            container.style.position = 'fixed';
+            container.style.top = '20px';
+            container.style.right = '20px';
+            container.style.zIndex = '1050';
+            document.body.appendChild(container);
+        }
+
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show m-0 mb-2`;
+        alert.role = 'alert';
+        alert.style.minWidth = '300px';
+        alert.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        container.appendChild(alert);
+
+        setTimeout(() => {
+            alert.classList.remove('show');
+            setTimeout(() => alert.remove(), 150);
+        }, 5000);
+    }
+
+    // Smooth scroll for pagination
+    const paginationLinks = document.querySelectorAll('.pagination .page-link');
+    paginationLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    });
+
+    // Store original button text for restoration on error
+    document.querySelectorAll('form[action*="respond_friend_request"] button').forEach(button => {
+        button.dataset.originalText = button.innerHTML;
+    });
+});
+</script>
+{% endblock %}

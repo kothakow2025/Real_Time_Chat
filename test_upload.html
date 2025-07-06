@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Media Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        .file-info {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            display: none;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <!-- NOTE: If uploads or notification sounds do not work, check that all referenced media/static files exist in the correct directories. -->
+    <h1>Test Media Upload</h1>
+    
+    <form id="upload-form" enctype="multipart/form-data">
+        <div class="upload-area" id="upload-area">
+            <p>Click to select a file or drag and drop</p>
+            <input type="file" id="file-input" name="file" accept="image/*,video/*" style="display: none;">
+        </div>
+        
+        <div class="file-info" id="file-info">
+            <p><strong>Selected file:</strong> <span id="file-name"></span></p>
+            <p><strong>File type:</strong> <span id="file-type"></span></p>
+            <p><strong>File size:</strong> <span id="file-size"></span></p>
+        </div>
+        
+        <button type="submit" id="submit-btn">Upload File</button>
+    </form>
+    
+    <div id="result"></div>
+    
+    <script>
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const fileInfo = document.getElementById('file-info');
+        const fileName = document.getElementById('file-name');
+        const fileType = document.getElementById('file-type');
+        const fileSize = document.getElementById('file-size');
+        const submitBtn = document.getElementById('submit-btn');
+        const result = document.getElementById('result');
+        
+        // Click to select file
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // File selected
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                fileName.textContent = file.name;
+                fileType.textContent = file.type;
+                fileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+                fileInfo.style.display = 'block';
+                
+                // Check file type
+                const isImage = file.type.startsWith('image/');
+                const isVideo = file.type.startsWith('video/');
+                
+                if (!isImage && !isVideo) {
+                    result.innerHTML = '<p style="color: red;">Please select an image or video file.</p>';
+                    submitBtn.disabled = true;
+                } else {
+                    result.innerHTML = '';
+                    submitBtn.disabled = false;
+                }
+                
+                // Check file size
+                const maxSize = 10 * 1024 * 1024; // 10MB
+                if (file.size > maxSize) {
+                    result.innerHTML = '<p style="color: red;">File size must be less than 10MB.</p>';
+                    submitBtn.disabled = true;
+                }
+            }
+        });
+        
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#007bff';
+            uploadArea.style.backgroundColor = '#e3f2fd';
+        });
+        
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#ccc';
+            uploadArea.style.backgroundColor = 'white';
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#ccc';
+            uploadArea.style.backgroundColor = 'white';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                fileInput.dispatchEvent(new Event('change'));
+            }
+        });
+        
+        // Form submission
+        document.getElementById('upload-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const file = fileInput.files[0];
+            if (!file) {
+                result.innerHTML = '<p style="color: red;">Please select a file first.</p>';
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Uploading...';
+            
+            // Simulate upload (replace with actual endpoint)
+            setTimeout(() => {
+                result.innerHTML = '<p style="color: green;">File upload simulation completed!</p>';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Upload File';
+            }, 2000);
+        });
+    </script>
+</body>
+</html> 

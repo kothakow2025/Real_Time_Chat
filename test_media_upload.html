@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Media Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .file-info {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Media Upload</h1>
+    
+    <form id="upload-form" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="conversation_id">Conversation ID:</label>
+            <input type="text" id="conversation_id" name="conversation_id" value="1" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="content">Message Content:</label>
+            <input type="text" id="content" name="content" placeholder="Type your message...">
+        </div>
+        
+        <div class="form-group">
+            <label for="file">Select Image or Video:</label>
+            <input type="file" id="file" name="file" accept="image/*,video/*">
+        </div>
+        
+        <div class="file-info" id="file-info" style="display: none;">
+            <strong>Selected File:</strong>
+            <div id="file-details"></div>
+        </div>
+        
+        <button type="submit">Send Message</button>
+    </form>
+    
+    <div id="result"></div>
+
+    <script>
+        const form = document.getElementById('upload-form');
+        const fileInput = document.getElementById('file');
+        const fileInfo = document.getElementById('file-info');
+        const fileDetails = document.getElementById('file-details');
+        const result = document.getElementById('result');
+
+        fileInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                const file = this.files[0];
+                const isImage = file.type.startsWith('image/');
+                const isVideo = file.type.startsWith('video/');
+                
+                fileDetails.innerHTML = `
+                    <p><strong>Name:</strong> ${file.name}</p>
+                    <p><strong>Type:</strong> ${file.type}</p>
+                    <p><strong>Size:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    <p><strong>Category:</strong> ${isImage ? 'Image' : isVideo ? 'Video' : 'Unknown'}</p>
+                `;
+                fileInfo.style.display = 'block';
+            } else {
+                fileInfo.style.display = 'none';
+            }
+        });
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('conversation_id', document.getElementById('conversation_id').value);
+            formData.append('content', document.getElementById('content').value);
+            
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const isImage = file.type.startsWith('image/');
+                const isVideo = file.type.startsWith('video/');
+                
+                if (!isImage && !isVideo) {
+                    showResult('Please select an image or video file.', 'error');
+                    return;
+                }
+                
+                const maxSize = 10 * 1024 * 1024; // 10MB
+                if (file.size > maxSize) {
+                    showResult('Media size is too large, please use 10MB or below size files', 'error');
+                    return;
+                }
+                
+                if (isImage) {
+                    formData.append('image', file);
+                } else if (isVideo) {
+                    formData.append('video', file);
+                }
+            }
+            
+            // Show loading
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Sending...';
+            submitBtn.disabled = true;
+            
+            fetch('/chat/send_message/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                
+                if (data.success) {
+                    showResult(`Message sent successfully! Message ID: ${data.message_id}`, 'success');
+                    form.reset();
+                    fileInfo.style.display = 'none';
+                } else {
+                    showResult(`Error: ${data.message || 'Unknown error'}`, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                showResult('Network error. Please try again.', 'error');
+            });
+        });
+
+        function showResult(message, type) {
+            result.innerHTML = `<div class="result ${type}">${message}</div>`;
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+</html> 
