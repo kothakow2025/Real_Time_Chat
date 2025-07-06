@@ -24,11 +24,12 @@ class UserProfile(models.Model):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         
-        # Resize image only if storage supports .path (i.e., local storage)
+        # Only perform local image resize if using FileSystemStorage (not S3)
+        from django.core.files.storage import default_storage
+        from django.core.files.storage import FileSystemStorage
         if (
             self.profile_picture and 
-            hasattr(self.profile_picture, 'path') and 
-            os.path.exists(getattr(self.profile_picture, 'path', '')) and 
+            isinstance(default_storage, FileSystemStorage) and 
             'default' not in self.profile_picture.name
         ):
             try:
