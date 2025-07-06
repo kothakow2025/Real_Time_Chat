@@ -33,6 +33,10 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://real-time-chat-hkj5.onrender.com",
+]
+
 
 # Application definition
 
