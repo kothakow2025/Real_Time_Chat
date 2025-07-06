@@ -1,0 +1,4 @@
+# netlify.toml placeholder for deployment compatibility
+[build]
+  publish = "staticfiles"
+  command = "echo 'No build needed for Django'"
