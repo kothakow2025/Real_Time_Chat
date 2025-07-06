@@ -317,17 +317,19 @@
                                         
                                         <!-- Action Buttons -->
                                         <div class="flex-shrink-0">
-                                            <div class="d-flex flex-column gap-2">
-                                                <a href="{% url 'chat:start_conversation' friend_data.user.id %}" class="btn btn-primary btn-sm">
-                                                    <i class="fas fa-comment me-1"></i>Message
-                                                </a>
-                                                <form method="post" action="{% url 'accounts:unfriend_user' %}" class="unfriend-form">
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="user_id" value="{{ friend_data.user.id }}">
-                                                    <button type="submit" class="btn btn-outline-danger btn-sm w-100">
-                                                        <i class="fas fa-user-minus"></i> Unfriend
-                                                    </button>
-                                                </form>
+                                            <div class="request-card">
+                                                <div class="d-flex flex-column gap-2">
+                                                    <a href="{% url 'chat:start_conversation' friend_data.user.id %}" class="btn btn-primary btn-sm">
+                                                        <i class="fas fa-comment me-1"></i>Message
+                                                    </a>
+                                                    <form method="post" action="{% url 'accounts:unfriend_user' %}" class="unfriend-form">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="user_id" value="{{ friend_data.user.id }}">
+                                                        <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                                                            <i class="fas fa-user-minus"></i> Unfriend
+                                                        </button>
+                                                    </form>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
