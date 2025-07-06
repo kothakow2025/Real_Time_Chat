@@ -316,6 +316,11 @@ const chatSocket = new WebSocket(
     wsScheme + '://' + window.location.host + '/ws/chat/' + conversationId + '/'
 );
 
+chatSocket.onclose = function(e) {
+    console.error('Chat socket closed unexpectedly');
+    // Optionally, show a notification or try to reconnect
+};
+
 chatSocket.onmessage = function(e) {
     const data = JSON.parse(e.data);
     
@@ -845,6 +850,23 @@ function addMessageToChat(message) {
     messageWrapper.innerHTML = messageBubbleHtml;
     chatMessages.appendChild(messageWrapper);
 }
+
+function handleAudioError() {
+    // Show a visible error in the chat UI
+    let errDiv = document.getElementById('audio-error');
+    if (!errDiv) {
+        errDiv = document.createElement('div');
+        errDiv.id = 'audio-error';
+        errDiv.style.color = 'red';
+        errDiv.style.fontWeight = 'bold';
+        errDiv.style.margin = '10px';
+        errDiv.textContent = 'Notification sound failed to load. Please check /static/audios/web_notification.mp3.';
+        document.body.appendChild(errDiv);
+    }
+    // Fallback: try to load a browser default beep
+    const audio = document.getElementById('notification-audio');
+    audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='; // short beep
+}
 </script>
-<audio id="notification-audio" src="/static/audios/web_notification.mp3" preload="auto"></audio>
+<audio id="notification-audio" src="/static/audios/web_notification.mp3" preload="auto" onerror="handleAudioError()"></audio>
 {% endblock %}

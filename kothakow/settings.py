@@ -25,10 +25,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-insecure-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 'yes')
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-# Allow all hosts for now (set your Render domain in production)
-ALLOWED_HOSTS = ['*']
+# Allow Render.com external hostname automatically
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 
 # Application definition
@@ -81,15 +84,16 @@ TEMPLATES = [
 WSGI_APPLICATION = 'kothakow.wsgi.application'
 ASGI_APPLICATION = 'kothakow.asgi.application'
 
-# Channels: Use Redis if REDIS_URL is set, else fallback to in-memory (not for production scale)
-if os.environ.get('REDIS_URL'):
+# Channels: Use Redis in production, InMemoryChannelLayer for local/dev
+REDIS_URL = os.environ.get('REDIS_URL')
+if REDIS_URL:
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": [os.environ.get("REDIS_URL")],
+                "hosts": [REDIS_URL],
             },
-        },
+        }
     }
 else:
     CHANNEL_LAYERS = {

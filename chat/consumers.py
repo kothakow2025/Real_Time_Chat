@@ -8,11 +8,15 @@ from django.utils import timezone
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        import logging
+        logger = logging.getLogger('chat.websocket')
+        logger.warning(f"WebSocket connect attempt: user={self.scope['user']} authenticated={self.scope['user'].is_authenticated}")
         self.conversation_id = self.scope['url_route']['kwargs']['conversation_id']
         self.room_group_name = f'chat_{self.conversation_id}'
         
         # AUTH CHECK: Only allow authenticated users
         if not self.scope['user'].is_authenticated:
+            logger.warning(f"WebSocket denied: user not authenticated")
             await self.close()
             return
         
@@ -23,6 +27,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
         
         await self.accept()
+        logger.warning(f"WebSocket accepted for user={self.scope['user']}")
         
         # Update user online status
         await self.update_user_online_status(self.scope['user'], True)
